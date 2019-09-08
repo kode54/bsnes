@@ -1,8 +1,9 @@
 #include "keyboard/quartz.cpp"
+#include "joypad/iokit.cpp"
 
 struct InputQuartz : InputDriver {
   InputQuartz& self = *this;
-  InputQuartz(Input& super) : InputDriver(super), keyboard(super) {}
+  InputQuartz(Input& super) : InputDriver(super), keyboard(super), joypadIOKit(super) {}
   ~InputQuartz() { terminate(); }
 
   auto create() -> bool override {
@@ -19,6 +20,7 @@ struct InputQuartz : InputDriver {
   auto poll() -> vector<shared_pointer<HID::Device>> override {
     vector<shared_pointer<HID::Device>> devices;
     keyboard.poll(devices);
+    joypadIOKit.poll(devices);
     return devices;
   }
 
@@ -30,14 +32,17 @@ private:
   auto initialize() -> bool {
     terminate();
     if(!keyboard.initialize()) return false;
+    if(!joypadIOKit.initialize()) return false;
     return isReady = true;
   }
 
   auto terminate() -> void {
     isReady = false;
     keyboard.terminate();
+    joypadIOKit.terminate();
   }
 
   bool isReady = false;
   InputKeyboardQuartz keyboard;
+  InputJoypadIOKit joypadIOKit;
 };
