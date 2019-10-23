@@ -15,6 +15,7 @@ struct InputJoypadIOKit {
         IOHIDElementRef element = (IOHIDElementRef)CFArrayGetValueAtIndex(elements, n);
         IOHIDElementType type = IOHIDElementGetType(element);
         uint32_t usage = IOHIDElementGetUsage(element);
+        print("appendElements ", elements, " ", element, " ", (int) type, " ", hex(usage), "\n");
         switch(type) {
         case kIOHIDElementTypeInput_Button:
           appendButton(element);
@@ -45,6 +46,7 @@ struct InputJoypadIOKit {
     auto appendAxis(IOHIDElementRef element) -> void {
       IOHIDElementCookie cookie = IOHIDElementGetCookie(element);
       if(auto duplicate = axes.find([cookie](auto axis) { return IOHIDElementGetCookie(axis) == cookie; })) {
+        print("appendAxis ", element, " ", cookie, " duplicate\n");
         return;
       }
 
@@ -53,6 +55,7 @@ struct InputJoypadIOKit {
       int range = max - min;
       if(range == 0) return;
 
+      print("appendAxis ", element, " ", cookie, " ", min, " ", max, " ", range, "\n");
       hid->axes().append(axes.size());
       axes.append(element);
     }
@@ -60,9 +63,11 @@ struct InputJoypadIOKit {
     auto appendHat(IOHIDElementRef element) -> void {
       IOHIDElementCookie cookie = IOHIDElementGetCookie(element);
       if(auto duplicate = hats.find([cookie](auto hat) { return IOHIDElementGetCookie(hat) == cookie; })) {
+        print("appendHat ", element, " ", cookie, " duplicate\n");
         return;
       }
 
+      print("appendHat ", element, " ", cookie, "\n");
       uint n = hats.size() * 2;
       hid->hats().append(n + 0);
       hid->hats().append(n + 1);
@@ -72,9 +77,11 @@ struct InputJoypadIOKit {
     auto appendButton(IOHIDElementRef element) -> void {
       IOHIDElementCookie cookie = IOHIDElementGetCookie(element);
       if(auto duplicate = buttons.find([cookie](auto button) { return IOHIDElementGetCookie(button) == cookie; })) {
+        print("appendButton ", element, " ", cookie, " duplicate\n");
         return;
       }
 
+      print("appendButton ", element, " ", cookie, "\n");
       hid->buttons().append(buttons.size());
       buttons.append(element);
     }
@@ -98,8 +105,15 @@ struct InputJoypadIOKit {
     group.input(inputID).setValue(value);
   }
 
+  uint64_t samples = 0;
+  uint64_t lastPrint = 0;
+  uint64_t durationDetect = 0;
+  uint64_t durationPoll = 0;
+
   auto poll(vector<shared_pointer<HID::Device>>& devices) -> void {
+    uint64_t t1 = microsecond();
     detectDevices();  //hotplug support
+    uint64_t t2 = microsecond();
 
     for(auto& jp : joypads) {
       IOHIDDeviceRef device = jp.device;
@@ -159,6 +173,20 @@ struct InputJoypadIOKit {
 
       devices.append(jp.hid);
     }
+
+    uint64_t t3 = microsecond();
+
+    durationDetect += t2 - t1;
+    durationPoll += t3 - t2;
+    samples++;
+    if (lastPrint == 0) lastPrint = t1;
+    else if (t3 - lastPrint >= 2000000) {
+      print(samples, " samples\n");
+      print("average detect\t", durationDetect / (double) samples, " us\n");
+      print("average poll\t", durationPoll / (double) samples, " us\n");
+      lastPrint = t3;
+      samples = durationDetect = durationPoll = 0;
+    }
   }
 
   auto rumble(uint64_t id, bool enable) -> bool {
@@ -207,6 +235,7 @@ struct InputJoypadIOKit {
 
     CFArrayRef elements = IOHIDDeviceCopyMatchingElements(device, nullptr, kIOHIDOptionsTypeNone);
     if(elements) {
+      print("appendJoypad ", device, " ", vendorID, " ", productID, "\n");
       jp.appendElements(elements);
       CFRelease(elements);
       joypads.append(jp);
@@ -270,9 +299,11 @@ private:
 };
 
 auto deviceMatchingCallback(void* context, IOReturn result, void* sender, IOHIDDeviceRef device) -> void {
+  print("deviceMatchingCallback ", context, " ", device, "\n");
   ((InputJoypadIOKit*)context)->appendJoypad(device);
 }
 
 auto deviceRemovalCallback(void* context, IOReturn result, void* sender, IOHIDDeviceRef device) -> void {
+  print("deviceRemovalCallback ", context, " ", device, "\n");
   ((InputJoypadIOKit*)context)->removeJoypad(device);
 }

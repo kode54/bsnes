@@ -17,6 +17,7 @@
 #include <nall/vector.hpp>
 #include <nall/dsp/resampler/cubic.hpp>
 #include <nall/hash/crc32.hpp>
+#include <nall/chrono.hpp>
 
 using nall::function;
 using nall::queue;
@@ -25,6 +26,7 @@ using nall::string;
 using nall::tuple;
 using nall::unique_pointer;
 using nall::vector;
+using nall::chrono::microsecond;
 
 namespace ruby {
 
