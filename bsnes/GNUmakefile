@@ -30,6 +30,7 @@ ifeq ($(platform),windows)
   endif
 else ifeq ($(platform),macos)
   ifeq ($(binary),application)
+    flags += -fno-stack-check
   else ifeq ($(binary),library)
     flags += -fPIC
     options += -dynamiclib
