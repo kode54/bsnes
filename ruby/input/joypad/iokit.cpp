@@ -44,6 +44,7 @@ struct InputJoypadIOKit {
     }
 
     auto appendAxis(IOHIDElementRef element) -> void {
+      // if(axes.size() >= 50) return;
       IOHIDElementCookie cookie = IOHIDElementGetCookie(element);
       if(auto duplicate = axes.find([cookie](auto axis) { return IOHIDElementGetCookie(axis) == cookie; })) {
         print("appendAxis ", element, " ", cookie, " duplicate\n");
@@ -55,7 +56,7 @@ struct InputJoypadIOKit {
       int range = max - min;
       if(range == 0) return;
 
-      print("appendAxis ", element, " ", cookie, " ", min, " ", max, " ", range, "\n");
+      print("appendAxis ", axes.size(), " ", element, " ", cookie, " ", min, " ", max, " ", range, "\n");
       hid->axes().append(axes.size());
       axes.append(element);
     }
@@ -67,7 +68,7 @@ struct InputJoypadIOKit {
         return;
       }
 
-      print("appendHat ", element, " ", cookie, "\n");
+      print("appendHat ", hats.size(), " ", element, " ", cookie, "\n");
       uint n = hats.size() * 2;
       hid->hats().append(n + 0);
       hid->hats().append(n + 1);
@@ -81,7 +82,7 @@ struct InputJoypadIOKit {
         return;
       }
 
-      print("appendButton ", element, " ", cookie, "\n");
+      print("appendButton ", buttons.size(), " ", element, " ", cookie, "\n");
       hid->buttons().append(buttons.size());
       buttons.append(element);
     }
@@ -239,6 +240,9 @@ struct InputJoypadIOKit {
       jp.appendElements(elements);
       CFRelease(elements);
       joypads.append(jp);
+      print("appendJoypad axes ", jp.axes.size(), "\n");
+      print("appendJoypad buttons ", jp.buttons.size(), "\n");
+      print("appendJoypad hats ", jp.hats.size(), "\n");
     }
   }
 
